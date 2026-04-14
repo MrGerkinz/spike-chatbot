@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listFaqs, createFaq } from "@/lib/faq";
+import { listCustomFaqs, createFaq } from "@/lib/faq";
 import { DEFAULT_FAQS } from "@/lib/seed";
 
 export async function POST(request: NextRequest) {
@@ -10,11 +10,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const existing = await listFaqs();
+  const existing = await listCustomFaqs();
   if (existing.length > 0) {
     return NextResponse.json(
       {
-        message: `Database already has ${existing.length} FAQ entries. Delete them first or use the admin page.`,
+        message: `Database already has ${existing.length} custom FAQ entries. Delete them first or use the admin page.`,
         count: existing.length,
       },
       { status: 409 }

@@ -209,44 +209,71 @@ function FaqManager({
         />
       )}
 
-      {faqs.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <p className="text-gray-500">
-            No FAQ entries yet. Click &quot;+ Add FAQ&quot; to create one.
-          </p>
-        </div>
-      ) : (
-        faqs.map((faq) => (
-          <div key={faq.id}>
-            {editingId === faq.id ? (
-              <FaqForm
-                initial={faq}
-                onSave={async (data) => {
-                  await editFaq(faq.id, data);
-                  setEditingId(null);
-                  onRefresh();
-                }}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
-              <FaqCard
-                faq={faq}
-                onEdit={() => setEditingId(faq.id)}
-                onToggle={async () => {
-                  await editFaq(faq.id, { enabled: !faq.enabled });
-                  onRefresh();
-                }}
-                onDelete={async () => {
-                  if (confirm("Delete this FAQ entry?")) {
-                    await removeFaq(faq.id);
-                    onRefresh();
-                  }
-                }}
-              />
+      {(() => {
+        const defaults = faqs.filter((f) => f.readonly);
+        const custom = faqs.filter((f) => !f.readonly);
+
+        return (
+          <>
+            {defaults.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Default Entries
+                </h3>
+                {defaults.map((faq) => (
+                  <FaqCard key={faq.id} faq={faq} />
+                ))}
+              </div>
             )}
-          </div>
-        ))
-      )}
+
+            {custom.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+                  Custom Entries
+                </h3>
+                {custom.map((faq) => (
+                  <div key={faq.id}>
+                    {editingId === faq.id ? (
+                      <FaqForm
+                        initial={faq}
+                        onSave={async (data) => {
+                          await editFaq(faq.id, data);
+                          setEditingId(null);
+                          onRefresh();
+                        }}
+                        onCancel={() => setEditingId(null)}
+                      />
+                    ) : (
+                      <FaqCard
+                        faq={faq}
+                        onEdit={() => setEditingId(faq.id)}
+                        onToggle={async () => {
+                          await editFaq(faq.id, { enabled: !faq.enabled });
+                          onRefresh();
+                        }}
+                        onDelete={async () => {
+                          if (confirm("Delete this FAQ entry?")) {
+                            await removeFaq(faq.id);
+                            onRefresh();
+                          }
+                        }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {custom.length === 0 && (
+              <div className="text-center py-8 bg-white rounded-xl border border-gray-200">
+                <p className="text-gray-500">
+                  No custom FAQ entries yet. Click &quot;+ Add FAQ&quot; to create one.
+                </p>
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -258,29 +285,39 @@ function FaqCard({
   onDelete,
 }: {
   faq: FaqEntry;
-  onEdit: () => void;
-  onToggle: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onToggle?: () => void;
+  onDelete?: () => void;
 }) {
   return (
     <div
       className={`bg-white rounded-xl border p-4 space-y-2 ${
-        faq.enabled ? "border-gray-200" : "border-gray-200 opacity-60"
+        faq.readonly
+          ? "border-blue-100 bg-blue-50/30"
+          : faq.enabled
+            ? "border-gray-200"
+            : "border-gray-200 opacity-60"
       }`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-semibold text-gray-900">{faq.category}</span>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full ${
-                faq.enabled
-                  ? "bg-green-100 text-green-700"
-                  : "bg-gray-100 text-gray-500"
-              }`}
-            >
-              {faq.enabled ? "Active" : "Disabled"}
-            </span>
+            {faq.readonly ? (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                Default
+              </span>
+            ) : (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full ${
+                  faq.enabled
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {faq.enabled ? "Active" : "Disabled"}
+              </span>
+            )}
           </div>
           <p className="text-sm text-gray-500 mb-1">{faq.question}</p>
           <p className="text-sm text-gray-700">{faq.answer}</p>
@@ -297,15 +334,21 @@ function FaqCard({
             </div>
           )}
         </div>
-        <div className="flex gap-1 shrink-0">
-          <SmallButton onClick={onEdit}>Edit</SmallButton>
-          <SmallButton onClick={onToggle}>
-            {faq.enabled ? "Disable" : "Enable"}
-          </SmallButton>
-          <SmallButton onClick={onDelete} variant="danger">
-            Delete
-          </SmallButton>
-        </div>
+        {!faq.readonly && (
+          <div className="flex gap-1 shrink-0">
+            {onEdit && <SmallButton onClick={onEdit}>Edit</SmallButton>}
+            {onToggle && (
+              <SmallButton onClick={onToggle}>
+                {faq.enabled ? "Disable" : "Enable"}
+              </SmallButton>
+            )}
+            {onDelete && (
+              <SmallButton onClick={onDelete} variant="danger">
+                Delete
+              </SmallButton>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

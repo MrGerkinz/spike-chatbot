@@ -4,9 +4,9 @@ export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
   {
     category: "Schedule",
     keywords: ["when", "time", "day", "schedule", "play", "session"],
-    question: "When do you play?",
+    question: "When do you play / what time?",
     answer:
-      "We play every Tuesday and Thursday evening from 7:00 PM to 9:00 PM. Sessions run year-round — just show up and have fun!",
+      "We play every Tuesday and Thursday evening from 7:00 PM to 9:00 PM. Doors open at 6:45 PM for warm-ups. Sessions run year-round — just show up and have fun!",
     enabled: true,
   },
   {
@@ -51,10 +51,18 @@ export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
   },
   {
     category: "Tickets",
-    keywords: ["ticket", "tickets", "buy", "purchase", "event", "tournament"],
-    question: "Where do I get tickets?",
+    keywords: ["ticket", "tickets", "buy", "purchase", "event", "tournament", "find", "get", "where"],
+    question: "Where do I find / buy tickets?",
     answer:
-      "Tickets for our events and tournaments are available through our Facebook events page. Keep an eye on our posts for upcoming events!",
+      "Tickets for our events and tournaments are available on our website and through our Facebook events page. You can also grab them at the door on the day, but we recommend buying online in advance as popular events sell out quickly!",
+    enabled: true,
+  },
+  {
+    category: "Ticket Release",
+    keywords: ["release", "released", "available", "sale", "on sale", "when", "tickets"],
+    question: "When are tickets released?",
+    answer:
+      "Tickets are usually released 2–3 weeks before each event. We announce release dates on our Facebook page and send reminders to members. Turn on notifications so you don't miss out!",
     enabled: true,
   },
   {

@@ -62,11 +62,13 @@ export async function editFaq(
   data: Partial<Omit<FaqEntry, "id">>
 ): Promise<FaqEntry | null> {
   if (!(await isAuthenticated())) throw new Error("Unauthorized");
+  if (id.startsWith("default-")) throw new Error("Cannot edit default entries");
   return updateFaq(id, data);
 }
 
 export async function removeFaq(id: string): Promise<boolean> {
   if (!(await isAuthenticated())) throw new Error("Unauthorized");
+  if (id.startsWith("default-")) throw new Error("Cannot delete default entries");
   return deleteFaq(id);
 }
 

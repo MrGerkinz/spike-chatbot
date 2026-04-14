@@ -1,0 +1,5 @@
+# Secrets
+.env*
+
+# Vercel local config
+.vercel
