@@ -16,6 +16,7 @@ import {
   clearNextSession,
   type SessionEntry,
 } from "@/lib/sessions";
+import { composeReply, type ComposedReply } from "@/lib/reply";
 
 const SESSION_COOKIE = "admin_session";
 const SESSION_DURATION = 60 * 60 * 24; // 24 hours in seconds
@@ -101,4 +102,11 @@ export async function saveSession(entry: SessionEntry): Promise<void> {
 export async function clearSession(): Promise<void> {
   if (!(await isAuthenticated())) throw new Error("Unauthorized");
   await clearNextSession();
+}
+
+export async function testChat(text: string): Promise<ComposedReply> {
+  if (!(await isAuthenticated())) throw new Error("Unauthorized");
+  const trimmed = text.trim();
+  if (!trimmed) throw new Error("Message cannot be empty");
+  return composeReply(trimmed);
 }
