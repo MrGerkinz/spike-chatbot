@@ -14,6 +14,7 @@ import {
   getSession,
   saveSession,
   clearSession,
+  testChat,
 } from "./actions";
 import type { FaqEntry, UnansweredEntry } from "@/lib/faq";
 import {
@@ -21,8 +22,9 @@ import {
   type SessionEntry,
   type TicketStatus,
 } from "@/lib/sessions";
+import type { ComposedReply } from "@/lib/reply";
 
-type Tab = "faqs" | "session" | "unanswered";
+type Tab = "faqs" | "session" | "unanswered" | "test";
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -137,7 +139,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 flex-wrap">
           <TabButton active={tab === "faqs"} onClick={() => setTab("faqs")}>
             FAQ Entries ({faqs.length})
           </TabButton>
@@ -153,6 +155,9 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           >
             Unanswered ({unanswered.length})
           </TabButton>
+          <TabButton active={tab === "test"} onClick={() => setTab("test")}>
+            Test Chat
+          </TabButton>
         </div>
 
         {loading ? (
@@ -161,11 +166,10 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           <FaqManager faqs={faqs} onRefresh={refresh} />
         ) : tab === "session" ? (
           <SessionManager session={session} onRefresh={refresh} />
+        ) : tab === "unanswered" ? (
+          <UnansweredLog entries={unanswered} onRefresh={refresh} />
         ) : (
-          <UnansweredLog
-            entries={unanswered}
-            onRefresh={refresh}
-          />
+          <TestChat />
         )}
       </div>
     </div>
@@ -872,5 +876,122 @@ function SmallButton({
     >
       {children}
     </button>
+  );
+}
+
+function TestChat() {
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<{
+    sentMessage: string;
+    composed: ComposedReply;
+  } | null>(null);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setError("");
+    setSending(true);
+    try {
+      const composed = await testChat(trimmed);
+      setResult({ sentMessage: trimmed, composed });
+      setText("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to test");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">Test Chat</h2>
+        <p className="text-sm text-gray-500 mt-1">
+          Type a message as if you were a user — see what the bot would reply
+          and why. Nothing is sent to Meta and no admin alerts fire.
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white rounded-xl border border-gray-200 p-4 space-y-3"
+      >
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="e.g. when do you guys play?"
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-y"
+        />
+        {error && (
+          <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{error}</p>
+        )}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={sending || !text.trim()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-medium disabled:opacity-50"
+          >
+            {sending ? "Testing..." : "Send"}
+          </button>
+        </div>
+      </form>
+
+      {result && <TestResultCard result={result} />}
+    </div>
+  );
+}
+
+function TestResultCard({
+  result,
+}: {
+  result: { sentMessage: string; composed: ComposedReply };
+}) {
+  const { sentMessage, composed } = result;
+  const matchLabel =
+    composed.matchPath === "faq"
+      ? `FAQ matched: ${composed.matchedFaqCategory}`
+      : composed.matchPath === "session"
+        ? `Session-aware reply: ${composed.matchedFaqCategory}`
+        : "Default reply (no match)";
+  const matchColor =
+    composed.matchPath === "fallback"
+      ? "bg-amber-100 text-amber-800"
+      : "bg-green-100 text-green-700";
+  const confidencePct = Math.round(composed.confidence * 100);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+      <div>
+        <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+          Your message
+        </p>
+        <p className="text-sm text-gray-800">{sentMessage}</p>
+      </div>
+      <div>
+        <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+          Reply
+        </p>
+        <p className="text-sm text-gray-900 whitespace-pre-wrap">
+          {composed.reply}
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+        <span
+          className={`text-xs px-2 py-1 rounded-full font-medium ${matchColor}`}
+        >
+          {matchLabel}
+        </span>
+        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
+          Category: {composed.category ?? "unknown"}
+        </span>
+        <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
+          Confidence: {confidencePct}%
+        </span>
+      </div>
+    </div>
   );
 }
