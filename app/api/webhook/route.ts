@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { after } from "next/server";
 import { extractMessages, sendMessage, verifyWebhookSignature } from "@/lib/meta";
-import { classifyMessage, isConfident } from "@/lib/classify";
-import { findFaqByCategory, getEnabledCategories, logUnanswered } from "@/lib/faq";
-import {
-  composeSessionAnswer,
-  getUpcomingSession,
-  isTimeSensitiveCategory,
-} from "@/lib/sessions";
+import { logUnanswered } from "@/lib/faq";
+import { composeReply } from "@/lib/reply";
 import { notifyAdmin } from "@/lib/notify";
-
-const FALLBACK_REPLY =
-  "Thanks for reaching out! I wasn't able to find an answer to your question. A team member will get back to you shortly.";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -60,28 +52,13 @@ async function handleMessage(
   text: string,
   platform: "messenger" | "instagram"
 ) {
-  const categories = await getEnabledCategories();
-  const classification = await classifyMessage(text, categories);
+  const result = await composeReply(text);
+  await sendMessage(senderId, result.reply);
 
-  if (isConfident(classification)) {
-    const faq = await findFaqByCategory(classification.category);
-    if (faq) {
-      const reply = await buildReply(faq.category, faq.answer);
-      await sendMessage(senderId, reply);
-      return;
-    }
+  if (result.matchPath === "fallback") {
+    await logUnanswered({ senderId, platform, message: text });
+    await notifyAdmin(text, senderId, platform).catch((err) =>
+      console.error("Failed to notify admin:", err)
+    );
   }
-
-  await sendMessage(senderId, FALLBACK_REPLY);
-  await logUnanswered({ senderId, platform, message: text });
-  await notifyAdmin(text, senderId, platform).catch((err) =>
-    console.error("Failed to notify admin:", err)
-  );
-}
-
-async function buildReply(category: string, fallback: string): Promise<string> {
-  if (!isTimeSensitiveCategory(category)) return fallback;
-  const session = await getUpcomingSession();
-  if (!session) return fallback;
-  return composeSessionAnswer(category, session);
 }
