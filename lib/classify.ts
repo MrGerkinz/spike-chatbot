@@ -24,7 +24,7 @@ export async function classifyMessage(
   }
 
   const result = await generateText({
-    model: google("gemini-2.0-flash"),
+    model: google("gemini-2.5-flash-lite"),
     output: Output.object({ schema: classificationSchema }),
     prompt: `You are a helpful assistant for a social volleyball club. A person has sent a message and you need to classify it into one of the following FAQ categories.
 
