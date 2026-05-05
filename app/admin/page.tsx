@@ -953,9 +953,9 @@ function TestResultCard({
   const { sentMessage, composed } = result;
   const matchLabel =
     composed.matchPath === "faq"
-      ? `FAQ matched: ${composed.matchedFaqCategory}`
+      ? `FAQ matched: ${composed.matchedFaqCategory ?? "?"}`
       : composed.matchPath === "session"
-        ? `Session-aware reply: ${composed.matchedFaqCategory}`
+        ? `Session-aware reply: ${composed.matchedFaqCategory ?? "?"}`
         : "Default reply (no match)";
   const matchColor =
     composed.matchPath === "fallback"
