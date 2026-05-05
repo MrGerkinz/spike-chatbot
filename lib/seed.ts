@@ -3,10 +3,19 @@ import type { FaqEntry } from "./faq";
 export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
   {
     category: "Schedule",
-    keywords: ["when", "time", "day", "schedule", "play", "session"],
-    question: "When do you play / what time?",
+    keywords: [
+      "when",
+      "time",
+      "day",
+      "schedule",
+      "play",
+      "session",
+      "next",
+      "weekend",
+    ],
+    question: "When are sessions / what time?",
     answer:
-      "We play every Tuesday and Thursday evening from 7:00 PM to 9:00 PM. Doors open at 6:45 PM for warm-ups. Sessions run year-round — just show up and have fun!",
+      "We play Sunday afternoons from 1:00 PM to 4:00 PM. Sessions don't run every weekend — check our latest Instagram post (@spike_volleyball) or TryBooking to see when the next confirmed session is.",
     enabled: true,
   },
   {
@@ -14,7 +23,7 @@ export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
     keywords: ["where", "location", "venue", "address", "gym", "court"],
     question: "Where do you play?",
     answer:
-      "We play at the local community sports centre. Check our Facebook page for the exact address and any venue changes.",
+      "We usually play at Albany Junior High School. The exact venue for each session is listed on its TryBooking ticket — we sometimes move, so always double-check before heading out.",
     enabled: true,
   },
   {
@@ -38,7 +47,7 @@ export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
     keywords: ["join", "sign up", "register", "membership", "member", "how to"],
     question: "How do I join?",
     answer:
-      "Just show up to one of our sessions! Your first visit is free so you can see if you like it. After that, you can sign up for a membership. Message us if you have any questions.",
+      "Sessions are open to anyone with a ticket — no membership or sign-up needed. Grab a ticket on TryBooking and turn up. We organise teams from whoever's there on the day, and all skill levels are welcome.",
     enabled: true,
   },
   {
@@ -46,23 +55,42 @@ export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
     keywords: ["cost", "price", "fee", "money", "pay", "much", "expensive"],
     question: "How much does it cost?",
     answer:
-      "We try to keep costs low. Drop-in sessions are available and membership gives you a discount. Contact us for current pricing details.",
+      "$15 per person per session, paid through TryBooking when you book your spot.",
     enabled: true,
   },
   {
     category: "Tickets",
-    keywords: ["ticket", "tickets", "buy", "purchase", "event", "tournament", "find", "get", "where"],
+    keywords: [
+      "ticket",
+      "tickets",
+      "buy",
+      "purchase",
+      "event",
+      "tournament",
+      "find",
+      "get",
+      "where",
+      "trybooking",
+    ],
     question: "Where do I find / buy tickets?",
     answer:
-      "Tickets for our events and tournaments are available on our website and through our Facebook events page. You can also grab them at the door on the day, but we recommend buying online in advance as popular events sell out quickly!",
+      "Tickets are sold on TryBooking. We post the link on Instagram (@spike_volleyball) every time a new session goes on sale.",
     enabled: true,
   },
   {
     category: "Ticket Release",
-    keywords: ["release", "released", "available", "sale", "on sale", "when", "tickets"],
+    keywords: [
+      "release",
+      "released",
+      "available",
+      "sale",
+      "on sale",
+      "when",
+      "tickets",
+    ],
     question: "When are tickets released?",
     answer:
-      "Tickets are usually released 2–3 weeks before each event. We announce release dates on our Facebook page and send reminders to members. Turn on notifications so you don't miss out!",
+      "Tickets go on sale Wednesday for that weekend's Sunday session. Follow @spike_volleyball on Instagram so you don't miss the drop — popular sessions sell out fast.",
     enabled: true,
   },
   {
@@ -79,21 +107,6 @@ export const DEFAULT_FAQS: Omit<FaqEntry, "id">[] = [
     question: "What do I need to bring?",
     answer:
       "Just bring comfortable sportswear, indoor court shoes (non-marking soles), and water. We provide the volleyballs and nets. Knee pads are optional but recommended.",
-    enabled: true,
-  },
-  {
-    category: "Social Events",
-    keywords: [
-      "social",
-      "drinks",
-      "party",
-      "hangout",
-      "off-court",
-      "after",
-    ],
-    question: "Do you have social events?",
-    answer:
-      "Absolutely! We regularly organise social events like post-game drinks, BBQs, and end-of-season parties. Follow our Facebook page to stay in the loop.",
     enabled: true,
   },
 ];

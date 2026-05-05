@@ -3,6 +3,11 @@ import { after } from "next/server";
 import { extractMessages, sendMessage, verifyWebhookSignature } from "@/lib/meta";
 import { classifyMessage, isConfident } from "@/lib/classify";
 import { findFaqByCategory, getEnabledCategories, logUnanswered } from "@/lib/faq";
+import {
+  composeSessionAnswer,
+  getUpcomingSession,
+  isTimeSensitiveCategory,
+} from "@/lib/sessions";
 import { notifyAdmin } from "@/lib/notify";
 
 const FALLBACK_REPLY =
@@ -61,7 +66,8 @@ async function handleMessage(
   if (isConfident(classification)) {
     const faq = await findFaqByCategory(classification.category);
     if (faq) {
-      await sendMessage(senderId, faq.answer);
+      const reply = await buildReply(faq.category, faq.answer);
+      await sendMessage(senderId, reply);
       return;
     }
   }
@@ -71,4 +77,11 @@ async function handleMessage(
   await notifyAdmin(text, senderId, platform).catch((err) =>
     console.error("Failed to notify admin:", err)
   );
+}
+
+async function buildReply(category: string, fallback: string): Promise<string> {
+  if (!isTimeSensitiveCategory(category)) return fallback;
+  const session = await getUpcomingSession();
+  if (!session) return fallback;
+  return composeSessionAnswer(category, session);
 }

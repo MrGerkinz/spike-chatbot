@@ -11,10 +11,18 @@ import {
   removeFaq,
   getUnanswered,
   clearAllUnanswered,
+  getSession,
+  saveSession,
+  clearSession,
 } from "./actions";
 import type { FaqEntry, UnansweredEntry } from "@/lib/faq";
+import {
+  ticketStatusValues,
+  type SessionEntry,
+  type TicketStatus,
+} from "@/lib/sessions";
 
-type Tab = "faqs" | "unanswered";
+type Tab = "faqs" | "session" | "unanswered";
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
@@ -93,13 +101,19 @@ export default function AdminPage() {
 function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [tab, setTab] = useState<Tab>("faqs");
   const [faqs, setFaqs] = useState<FaqEntry[]>([]);
+  const [session, setSession] = useState<SessionEntry | null>(null);
   const [unanswered, setUnanswered] = useState<UnansweredEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     setLoading(true);
-    const [f, u] = await Promise.all([getFaqs(), getUnanswered()]);
+    const [f, s, u] = await Promise.all([
+      getFaqs(),
+      getSession(),
+      getUnanswered(),
+    ]);
     setFaqs(f);
+    setSession(s);
     setUnanswered(u);
     setLoading(false);
   }, []);
@@ -128,6 +142,12 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             FAQ Entries ({faqs.length})
           </TabButton>
           <TabButton
+            active={tab === "session"}
+            onClick={() => setTab("session")}
+          >
+            Next Session{session ? " ✓" : ""}
+          </TabButton>
+          <TabButton
             active={tab === "unanswered"}
             onClick={() => setTab("unanswered")}
           >
@@ -139,6 +159,8 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
           <p className="text-gray-500 text-center py-12">Loading...</p>
         ) : tab === "faqs" ? (
           <FaqManager faqs={faqs} onRefresh={refresh} />
+        ) : tab === "session" ? (
+          <SessionManager session={session} onRefresh={refresh} />
         ) : (
           <UnansweredLog
             entries={unanswered}
@@ -451,6 +473,297 @@ function FaqForm({
         </button>
       </div>
     </form>
+  );
+}
+
+const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
+  not_yet: "Not on sale yet",
+  on_sale: "On sale now",
+  sold_out: "Sold out",
+};
+
+function todayInAucklandISO(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Pacific/Auckland",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function SessionManager({
+  session,
+  onRefresh,
+}: {
+  session: SessionEntry | null;
+  onRefresh: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const today = todayInAucklandISO();
+  const isPast = session ? session.date < today : false;
+
+  if (editing || !session) {
+    return (
+      <SessionForm
+        initial={session ?? undefined}
+        onSave={async (data) => {
+          await saveSession(data);
+          setEditing(false);
+          onRefresh();
+        }}
+        onCancel={session ? () => setEditing(false) : undefined}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-900">Next Session</h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setEditing(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-medium"
+          >
+            Edit
+          </button>
+          <button
+            onClick={async () => {
+              if (confirm("Clear the next session?")) {
+                await clearSession();
+                onRefresh();
+              }
+            }}
+            className="text-sm text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg transition font-medium"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+
+      {isPast && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-3 text-sm">
+          This session date has passed. The bot is treating it as &quot;no
+          upcoming session&quot; — update or clear it.
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-2">
+        <Row label="Date" value={session.date} />
+        <Row
+          label="Time"
+          value={`${session.startTime} – ${session.endTime}`}
+        />
+        <Row label="Venue" value={session.venue} />
+        <Row label="Tickets" value={TICKET_STATUS_LABELS[session.ticketStatus]} />
+        {session.ticketUrl && (
+          <Row
+            label="Ticket URL"
+            value={
+              <a
+                href={session.ticketUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:underline break-all"
+              >
+                {session.ticketUrl}
+              </a>
+            }
+          />
+        )}
+        {session.notes && <Row label="Notes" value={session.notes} />}
+      </div>
+    </div>
+  );
+}
+
+function Row({
+  label,
+  value,
+}: {
+  label: string;
+  value: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-3 text-sm">
+      <span className="font-medium text-gray-500 w-24 shrink-0">{label}</span>
+      <span className="text-gray-900 break-words">{value}</span>
+    </div>
+  );
+}
+
+function SessionForm({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial?: SessionEntry;
+  onSave: (data: SessionEntry) => Promise<void>;
+  onCancel?: () => void;
+}) {
+  const [date, setDate] = useState(initial?.date ?? "");
+  const [startTime, setStartTime] = useState(initial?.startTime ?? "13:00");
+  const [endTime, setEndTime] = useState(initial?.endTime ?? "16:00");
+  const [venue, setVenue] = useState(
+    initial?.venue ?? "Albany Junior High School"
+  );
+  const [ticketUrl, setTicketUrl] = useState(initial?.ticketUrl ?? "");
+  const [ticketStatus, setTicketStatus] = useState<TicketStatus>(
+    initial?.ticketStatus ?? "not_yet"
+  );
+  const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSaving(true);
+    try {
+      await onSave({
+        date,
+        startTime,
+        endTime,
+        venue: venue.trim(),
+        ticketUrl: ticketUrl.trim() || undefined,
+        ticketStatus,
+        notes: notes.trim() || undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white rounded-xl border border-blue-200 p-4 space-y-3"
+    >
+      <h3 className="font-semibold text-gray-900">
+        {initial ? "Edit Next Session" : "Set Next Session"}
+      </h3>
+      {error && (
+        <p className="text-red-600 text-sm bg-red-50 p-2 rounded">{error}</p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <DateField label="Date" value={date} onChange={setDate} required />
+        <TimeField
+          label="Start"
+          value={startTime}
+          onChange={setStartTime}
+          required
+        />
+        <TimeField label="End" value={endTime} onChange={setEndTime} required />
+      </div>
+      <Field label="Venue" value={venue} onChange={setVenue} required />
+      <Field
+        label="Ticket URL (optional)"
+        value={ticketUrl}
+        onChange={setTicketUrl}
+        placeholder="https://www.trybooking.com/nz/events/landing/..."
+      />
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Ticket Status
+        </label>
+        <select
+          value={ticketStatus}
+          onChange={(e) => setTicketStatus(e.target.value as TicketStatus)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+        >
+          {ticketStatusValues.map((s) => (
+            <option key={s} value={s}>
+              {TICKET_STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notes (optional)
+        </label>
+        <textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          rows={2}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-y"
+        />
+      </div>
+      <div className="flex gap-2 justify-end">
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition"
+          >
+            Cancel
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition font-medium disabled:opacity-50"
+        >
+          {saving ? "Saving..." : "Save"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      />
+    </div>
+  );
+}
+
+function TimeField({
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label}
+      </label>
+      <input
+        type="time"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        required={required}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+      />
+    </div>
   );
 }
 

@@ -10,6 +10,12 @@ import {
   clearUnanswered,
   type FaqEntry,
 } from "@/lib/faq";
+import {
+  getNextSession,
+  setNextSession,
+  clearNextSession,
+  type SessionEntry,
+} from "@/lib/sessions";
 
 const SESSION_COOKIE = "admin_session";
 const SESSION_DURATION = 60 * 60 * 24; // 24 hours in seconds
@@ -80,4 +86,19 @@ export async function getUnanswered() {
 export async function clearAllUnanswered(): Promise<void> {
   if (!(await isAuthenticated())) throw new Error("Unauthorized");
   await clearUnanswered();
+}
+
+export async function getSession(): Promise<SessionEntry | null> {
+  if (!(await isAuthenticated())) throw new Error("Unauthorized");
+  return getNextSession();
+}
+
+export async function saveSession(entry: SessionEntry): Promise<void> {
+  if (!(await isAuthenticated())) throw new Error("Unauthorized");
+  await setNextSession(entry);
+}
+
+export async function clearSession(): Promise<void> {
+  if (!(await isAuthenticated())) throw new Error("Unauthorized");
+  await clearNextSession();
 }
